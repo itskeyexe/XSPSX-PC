@@ -1,0 +1,41 @@
+﻿<Window x:Class="XSPSX.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Boot Screen" WindowState="Maximized" WindowStyle="None" Background="Black">
+    <Grid>
+        <!-- Video Player for Boot Animation -->
+        <MediaElement Name="BootVideo" 
+                      Source="Resources/Video/xspsxcoldboot.mp4" 
+                      LoadedBehavior="Manual" 
+                      Stretch="Fill" 
+                      MediaEnded="BootVideo_MediaEnded" />
+
+        <!-- Audio Player for Boot Sound -->
+        <MediaElement Name="BootSound" 
+                      Source="Resources/ps3-startup-sound.mp3" 
+                      LoadedBehavior="Manual" />
+
+        <!-- Blur Effect -->
+        <Border Name="BlurredBackground" 
+                Background="Black" 
+                Opacity="0.5" 
+                Visibility="Hidden">
+            <Border.Effect>
+                <BlurEffect Radius="15" />
+            </Border.Effect>
+        </Border>
+
+        <!-- Warning Message -->
+        <TextBlock Name="WarningMessage" 
+                   Text="WARNING: Do not turn off the system while saving or loading data. Created by itskeyexe all rights belong to Sony." 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Foreground="White" 
+                   Background="Transparent" 
+                   TextAlignment="Center" 
+                   HorizontalAlignment="Center" 
+                   VerticalAlignment="Center" 
+                   Visibility="Hidden" />
+    </Grid>
+</Window>
+
