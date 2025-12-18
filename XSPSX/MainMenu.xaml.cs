@@ -1,14 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
-using System.Windows.Media;
-using System.Windows;
-using System;
 using System.Windows.Media.Imaging;
-using System.Threading.Tasks;
-using System.Linq;
 
 namespace XSPSX
 {
@@ -50,6 +51,7 @@ namespace XSPSX
             ("Launch Disk", "Resources/Icons/disk2.png"),
             ("PCSX2", "Resources/Icons/pcsx2Alt.png"),
             ("Games", "Resources/Icons/xspsxGamesIcon.png"),
+            ("Twilight Requiem", "Resources/Icons/TwilightRequiemLogo.png"),
             ("Package Manager", "Resources/Icons/folderStar.png")
         }
     },
@@ -1009,6 +1011,53 @@ namespace XSPSX
                                 ShowNotification("PCSX2 Closed", "Returned to the main menu.", "Resources/Icons/controller.png");
                             });
                         });
+                    }
+                    else if (currentOption == "Twilight Requiem")
+                    {
+                        string exePath = @"C:\PCSX2\games\TwilightRequiemBuildPrototype\Twilight Requiem.exe";  // Change if your path is different
+
+                        if (!System.IO.File.Exists(exePath))
+                        {
+                            ShowNotification("Game Not Found", "Twilight Requiem.exe is missing!", "Resources/Icons/TwilightRequiemLogo.png");
+                            return;
+                        }
+
+                        // Optional: Custom background (uses filename without extension)
+                        SetGameBackground(exePath);
+
+                        // Spin the disk icon like a real PS3 game boot
+                        StartDiskSpinAnimation();
+
+                        ShowNotification("Launching Game", "Starting Twilight Requiem Prototype...", "Resources/Icons/TwilightRequiemLogo.png");
+
+                        // Pause menu input and music
+                        inputTimer.Stop();
+                        backgroundMusicPlayer.Pause();
+
+                        await Task.Delay(2000);  // Dramatic boot delay
+
+                        // Launch the .exe directly
+                        var startInfo = new ProcessStartInfo
+                        {
+                            FileName = exePath,
+                            UseShellExecute = false,
+                            CreateNoWindow = false  // Set to true if your game is console-only and you don't want a cmd window
+                        };
+
+                        var gameProcess = new Process { StartInfo = startInfo };
+                        gameProcess.EnableRaisingEvents = true;
+                        gameProcess.Exited += (sender, args) =>
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                inputTimer.Start();
+                                backgroundMusicPlayer.Play();
+                                StopDiskSpinAnimation();
+                                ShowNotification("Game Closed", "Returned to XSPSX.", "Resources/Icons/controller.png");
+                            });
+                        };
+
+                        gameProcess.Start();
                     }
                     else if (currentOption == "Launch Disk") // Launch the selected game
                     {

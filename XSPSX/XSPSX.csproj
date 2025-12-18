@@ -160,6 +160,8 @@
     <Content Include="Resources\Icons\pcsx2Alt.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Resource Include="Resources\Icons\TwilightRequiemLogo.png" />
+    <Resource Include="Resources\Icons\TitleLOGO1920x1080White.png" />
     <Content Include="Resources\Icons\xspsxGamesIcon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
