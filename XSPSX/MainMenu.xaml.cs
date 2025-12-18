@@ -79,7 +79,7 @@ namespace XSPSX
                                                //media
 
         private string selectedGame;
-        private List<string> availableGames = new List<string> { "Kingdom Hearts II - Final Mix", "Final Fantasy X", "Shadow of the Colossus" };
+        private List<string> availableGames = new List<string> { "Kingdom Hearts II - Final Mix", "Legend of Spyro, The - The Eternal Night (USA)", "CodeBreaker v10.1" };
 
         private MediaPlayer scrollSoundPlayer = new MediaPlayer();
         //controller
