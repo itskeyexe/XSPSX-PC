@@ -22,7 +22,7 @@ namespace XSPSX
             try
             {
                 await WebView.EnsureCoreWebView2Async(null);
-                WebView.Source = new Uri("https://xspsxinjector.me");
+                WebView.Source = new Uri("https://twilightrequiem.dev");
 
                 // Inject JavaScript to detect file downloads
                 WebView.CoreWebView2.NavigationCompleted += async (sender, args) =>
