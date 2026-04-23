@@ -278,6 +278,13 @@ namespace XSPSX
                     updateWin.ShowDialog();
                     break;
 
+                case "My System Info":
+                    // Open the Information Window 
+                    SystemInfoWindow infoWin = new SystemInfoWindow();
+                    infoWin.Owner = this; // Keeps it centered and linked to Main
+                    infoWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                    infoWin.ShowDialog();
+                    break;
                 case "Package Manager":
                     // Future logic for package manager
                     ShowNotification("System", "Package Manager accessed.", "Resources/Icons/folderStar.png");
