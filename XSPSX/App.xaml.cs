@@ -11,6 +11,13 @@ namespace XSPSX
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
+//
+        public static class SystemSettings
+        {
+            public static string CurrentFirmware { get; set; } = "XSPSX_OFW_1.00";
+        }
+    
+
     public partial class App : Application
     {
     }

@@ -14,9 +14,9 @@ namespace XSPSX
 
         private MainMenu mainMenu;
 
-        public SharpXInputHandler(MainMenu mainMenu)
+        public SharpXInputHandler(MainMenu mainMenu = null) // Default to null for sub-windows
         {
-            this.mainMenu = mainMenu; // Pass the MainMenu instance
+            this.mainMenu = mainMenu;
             controller = new Controller(UserIndex.One);
             IsConnected = controller.IsConnected;
 
@@ -25,18 +25,21 @@ namespace XSPSX
                 Console.WriteLine("Controller connected: Xbox Controller (via DS4Windows)");
                 previousState = controller.GetState();
 
-                // Delay the notification to ensure the window is fully loaded
-                Task.Delay(2000).ContinueWith(_ =>
+                // FIX: Only attempt notification if mainMenu is NOT null
+                if (mainMenu != null)
                 {
-                    mainMenu.Dispatcher.Invoke(() =>
+                    Task.Delay(2000).ContinueWith(_ =>
                     {
-                        mainMenu.ShowNotification(
-                            "itskeyexe",
-                            "XSPSX - Controller Connected!",
-                            "Resources/Icons/controller.png"
-                        );
+                        mainMenu.Dispatcher.Invoke(() =>
+                        {
+                            mainMenu.ShowNotification(
+                                "itskeyexe",
+                                "XSPSX - Controller Connected!",
+                                "Resources/Icons/controller.png"
+                            );
+                        });
                     });
-                });
+                }
             }
             else
             {
@@ -44,34 +47,31 @@ namespace XSPSX
             }
         }
 
-
-
-
         private bool IsButtonJustPressed(GamepadButtonFlags button, GamepadButtonFlags currentButtons, GamepadButtonFlags previousButtons)
         {
-            // Check if the button is newly pressed (wasn't pressed in the previous state)
             return (currentButtons & button) != 0 && (previousButtons & button) == 0;
         }
 
         public void Update()
         {
-            if (!IsConnected)
-            {
-                if (controller.IsConnected)
-                {
-                    IsConnected = true;
-                    Console.WriteLine("Controller reconnected.");
-                    previousState = controller.GetState();
-                }
-                else
-                {
-                    return; // Still disconnected
-                }
-            }
-
-            // Get the current state
             try
             {
+                if (controller == null) return;
+
+                if (!IsConnected)
+                {
+                    if (controller.IsConnected)
+                    {
+                        IsConnected = true;
+                        Console.WriteLine("Controller reconnected.");
+                        previousState = controller.GetState();
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+
                 currentState = controller.GetState();
                 var currentButtons = currentState.Gamepad.Buttons;
                 var previousButtons = previousState.Gamepad.Buttons;
@@ -86,11 +86,18 @@ namespace XSPSX
                 ButtonA = IsButtonJustPressed(GamepadButtonFlags.A, currentButtons, previousButtons);
                 ButtonB = IsButtonJustPressed(GamepadButtonFlags.B, currentButtons, previousButtons);
 
-                previousState = currentState; // Update the previous state
+                previousState = currentState;
             }
-            catch (Exception ex)
+            catch (SharpDX.SharpDXException)
             {
-                Console.WriteLine($"Error updating controller state: {ex.Message}");
+                // Specifically handle controller disconnection/lost device
+                IsConnected = false;
+            }
+            catch (Exception) // Removed 'ex' variable to resolve the "unused variable" warning
+            {
+                // High-speed polling (60fps) can occasionally throw a SharpDXException 
+                // if the controller is physically unplugged during a GetState() call. 
+                // We catch it silently here to prevent a UI crash.
                 IsConnected = false;
             }
         }
@@ -111,7 +118,7 @@ namespace XSPSX
 
         public void Dispose()
         {
-            Console.WriteLine("Controller resources released.");
+            controller = null;
         }
     }
 }

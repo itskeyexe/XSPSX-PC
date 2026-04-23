@@ -29,7 +29,7 @@ namespace XSPSX
     },
     { "Settings", new List<(string, string)>
         {
-            ("System Settings", "Resources/Icons/folder.png"),
+            ("System Update", "Resources/Icons/folder.png"),
             ("My System Info", "Resources/Icons/folder.png"),
             ("Display Settings", "Resources/Icons/folder.png"),
             ("XSPSX Themes", "Resources/Icons/folder.png"),
@@ -256,7 +256,43 @@ namespace XSPSX
         }
 
 
+        private void ExecuteSelection(string selection)
+        {
+            switch (selection)
+            {
+                case "System Update":
+                    // 1. Create the dummy file so the Update Window has something to find
+                    string updateDir = System.IO.Path.Combine(FileSystemManager.RootPath, "Updates");
+                    if (!System.IO.Directory.Exists(updateDir)) System.IO.Directory.CreateDirectory(updateDir);
 
+                    string dummyFilePath = System.IO.Path.Combine(updateDir, "XSPSX_HFW_4.91.upd");
+                    if (!System.IO.File.Exists(dummyFilePath))
+                    {
+                        System.IO.File.WriteAllText(dummyFilePath, "XSPSX Simulation Update Data");
+                    }
+
+                    // 2. Open the Update Window
+                    SystemUpdateWindow updateWin = new SystemUpdateWindow();
+                    updateWin.Owner = this;
+                    updateWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                    updateWin.ShowDialog();
+                    break;
+
+                case "Package Manager":
+                    // Future logic for package manager
+                    ShowNotification("System", "Package Manager accessed.", "Resources/Icons/folderStar.png");
+                    break;
+
+                case "itskeyexe":
+                    ShowNotification("User", "Logged in as itskeyexe", "Resources/Icons/folder.png");
+                    break;
+
+                default:
+                    // For other options, just show a placeholder
+                    ShowNotification("System", $"Selected: {selection}", "Resources/Icons/folder.png");
+                    break;
+            }
+        }
 
 
 
@@ -312,7 +348,6 @@ namespace XSPSX
         {
             if (!xInputHandler.IsConnected)
             {
-                Console.WriteLine("Waiting for controller connection...");
                 return;
             }
 
@@ -321,29 +356,33 @@ namespace XSPSX
             // D-Pad navigation
             if (xInputHandler.IsDPadLeftPressed())
             {
-                NavigateCategories(-1); // Same as Left Arrow
+                NavigateCategories(-1);
             }
             else if (xInputHandler.IsDPadRightPressed())
             {
-                NavigateCategories(1); // Same as Right Arrow
+                NavigateCategories(1);
             }
             else if (xInputHandler.IsDPadUpPressed())
             {
-                NavigateVerticalOptions(-1); // Same as Up Arrow
+                NavigateVerticalOptions(-1);
             }
             else if (xInputHandler.IsDPadDownPressed())
             {
-                NavigateVerticalOptions(1); // Same as Down Arrow
+                NavigateVerticalOptions(1);
             }
 
             // Button actions
-            if (xInputHandler.IsButtonAPressed())
+            if (xInputHandler.IsButtonAPressed()) // This handles the "Confirm/Select" action
             {
-                ConfirmSelection(); // Perform confirm action
+                // Use the same logic as the Enter key
+                string currentCategory = categories[selectedCategoryIndex];
+                string selectedOptionText = categoryData[currentCategory][selectedVerticalIndex].Text;
+
+                ExecuteSelection(selectedOptionText);
             }
             else if (xInputHandler.IsButtonBPressed())
             {
-                CancelSelection(); // Perform cancel action
+                CancelSelection();
             }
         }
 
@@ -1180,6 +1219,17 @@ namespace XSPSX
             else if (e.Key == Key.Down || e.Key == Key.S)
             {
                 NavigateVerticalOptions(1);
+            }
+            // ADD THIS BLOCK BELOW
+            else if (e.Key == Key.Enter)
+            {
+                string currentCategory = categories[selectedCategoryIndex];
+                var options = categoryData[currentCategory];
+
+                // Get the text of the item currently highlighted in the vertical list
+                string selectedOptionText = options[selectedVerticalIndex].Text;
+
+                ExecuteSelection(selectedOptionText);
             }
         }
     }
