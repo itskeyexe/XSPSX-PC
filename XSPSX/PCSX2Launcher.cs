@@ -1,49 +1,55 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 
-public class PCSX2Launcher
+namespace XSPSX
 {
-    private string pcsx2Path;
-
-    public PCSX2Launcher(string pcsx2Path)
+    public class PCSX2Launcher
     {
-        this.pcsx2Path = pcsx2Path;
-    }
+        private string pcsx2Path;
 
-    public void LaunchPCSX2(string isoPath = null, Action onPCSX2Exit = null)
-    {
-        try
+        public PCSX2Launcher(string emuPath = null)
         {
-            // Ensure the ISO path is correctly enclosed in quotes
-            string arguments = string.IsNullOrEmpty(isoPath) ? "" : $"\"{isoPath}\"";
-
-            Console.WriteLine($"Launching PCSX2 with arguments: {arguments}");
-
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = pcsx2Path,
-                Arguments = arguments,  // Correctly formatted game path
-                UseShellExecute = false,
-                RedirectStandardOutput = false,
-                RedirectStandardError = false,
-                CreateNoWindow = true // No extra command window
-            };
-
-            Process pcsx2Process = new Process { StartInfo = startInfo };
-            pcsx2Process.EnableRaisingEvents = true;
-
-            pcsx2Process.Exited += (sender, args) =>
-            {
-                Console.WriteLine("PCSX2 process exited.");
-                onPCSX2Exit?.Invoke();
-            };
-
-            pcsx2Process.Start();
+            // If we pass a path, use it; otherwise, use your local hardcoded path
+            this.pcsx2Path = emuPath ?? @"C:\Users\ikerk\Documents\XSPSX-PC-master\XSPSX-PC\XSPSX\PCSX2\pcsx2-qt.exe";
         }
-        catch (Exception ex)
+
+        public void LaunchPCSX2(string isoPath = null, Action onPCSX2Exit = null)
         {
-            Console.WriteLine($"Failed to start PCSX2: {ex.Message}");
+            try
+            {
+                if (!File.Exists(pcsx2Path))
+                {
+                    System.Windows.MessageBox.Show($"Emulator not found at: {pcsx2Path}");
+                    return;
+                }
+
+                // Launch arguments
+                string arguments = string.IsNullOrEmpty(isoPath)
+                    ? "-fullscreen"
+                    : $"-fullscreen -batch \"{isoPath}\"";
+
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = pcsx2Path,
+                    Arguments = arguments,
+                    UseShellExecute = true
+                };
+
+                Process pcsx2Process = new Process { StartInfo = startInfo };
+                pcsx2Process.EnableRaisingEvents = true;
+
+                pcsx2Process.Exited += (sender, args) =>
+                {
+                    onPCSX2Exit?.Invoke();
+                };
+
+                pcsx2Process.Start();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Critical Launch Error: {ex.Message}");
+            }
         }
     }
 }
-

@@ -108,40 +108,6 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Game Side Menu -->
-        <Grid Name="GameSideMenu" HorizontalAlignment="Right" VerticalAlignment="Center" Height="1050" Width="420" Visibility="Collapsed" Margin="0,0,50,0">
-            <Border Background="#222" CornerRadius="10" BorderBrush="Cyan" BorderThickness="2">
-                <StackPanel>
-                    <!-- Title -->
-                    <TextBlock Text="Game Library" FontSize="20" FontWeight="Bold" Foreground="White" Margin="10" HorizontalAlignment="Center" />
-
-                    <!-- Separator -->
-                    <Border Background="Cyan" Height="2" Margin="10" />
-
-                    <!-- Game List -->
-                    <ListBox Name="GameListBox"
-         Background="Transparent"
-         BorderThickness="0"
-         Foreground="White"
-         FontSize="16"
-         VerticalAlignment="Stretch"
-         HorizontalContentAlignment="Center"
-         VerticalContentAlignment="Center"
-         SelectionChanged="GameListBox_SelectionChanged">
-                        <ListBoxItem Content="Kingdom Hearts 2 Final Mix" Tag="C:\PCSX2\games\Kingdom Hearts 2 Final Mix.iso" />
-                        <ListBoxItem Content="Final Fantasy X" Tag="C:\PCSX2\games\Final Fantasy X.iso" />
-                        <ListBoxItem Content="Shadow of the Colossus" Tag="C:\PCSX2\games\Shadow of the Colossus.iso" />
-                        <ListBoxItem Content="Close" Tag="Close" />
-                    </ListBox>
-
-
-
-                </StackPanel>
-            </Border>
-        </Grid>
-
-
-
         <!-- Notification Area -->
         <Grid Name="NotificationGrid" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,20,20,0" Visibility="Collapsed">
             <Border Background="Black" CornerRadius="1" Padding="0" Width="370" Height="120" BorderBrush="White" BorderThickness="2">
@@ -162,6 +128,33 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+        </Grid>
+        <Grid x:Name="HorizontalGamesOverlay" Visibility="Collapsed" Background="#EE000000">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="GAMES LIBRARY" Foreground="White" FontSize="28" FontWeight="Bold" Margin="100,0,0,20" Opacity="0.7"/>
+
+                <ListBox x:Name="HorizontalGameList" Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Hidden">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="100,0,100,0"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="10" Width="300">
+                                <Border BorderBrush="White" BorderThickness="2" Height="300" Background="#222">
+                                    <Image Source="{Binding IconPath}" Stretch="UniformToFill"/>
+                                </Border>
+                                <TextBlock Text="{Binding Text}" Foreground="White" FontSize="20" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Text="[A] Start Game  |  [B] Back to XMB" Foreground="White" Opacity="0.5" HorizontalAlignment="Center" Margin="0,40,0,0"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

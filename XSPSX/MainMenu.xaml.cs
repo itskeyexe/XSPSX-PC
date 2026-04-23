@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -30,7 +31,7 @@ namespace XSPSX
     { "Settings", new List<(string, string)>
         {
             ("System Update", "Resources/Icons/folder.png"),
-            ("My System Info", "Resources/Icons/folder.png"),
+            ("XSPSX Information", "Resources/Icons/folder.png"),
             ("Display Settings", "Resources/Icons/folder.png"),
             ("XSPSX Themes", "Resources/Icons/folder.png"),
             ("Package Manager", "Resources/Icons/folderStar.png")
@@ -78,10 +79,7 @@ namespace XSPSX
         //xmb
         private int selectedCategoryIndex = 0;
         private int selectedVerticalIndex = 0; // Track the selected vertical item
-                                               //media
-
-        private string selectedGame;
-        private List<string> availableGames = new List<string> { "Kingdom Hearts II - Final Mix", "Legend of Spyro, The - The Eternal Night (USA)", "CodeBreaker v10.1" };
+                                               
 
         private MediaPlayer scrollSoundPlayer = new MediaPlayer();
         //controller
@@ -98,6 +96,11 @@ namespace XSPSX
 
         private System.Timers.Timer spinTimer;
         private bool isSpinning = false; // Tracks if the animation is running
+
+        private bool isHorizontalMenuOpen = false;
+        private List<(string Text, string IconPath)> scannedGames = new List<(string, string)>();
+
+        private bool isExecuting = false;
 
         // Initializer---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         public MainMenu()
@@ -166,95 +169,33 @@ namespace XSPSX
             HighlightSelectedButton(selectedCategoryIndex);
             ScrollToCategory(selectedCategoryIndex, true); // Initialize to "Users"
 
-            // Preload game side menu
-            InitializeGameSideMenu();
+            RefreshGamesLibrary(); // Initial scan of games
+
 
         }
 
-        private void InitializeGameSideMenu()
+        private void RefreshGamesLibrary()
         {
-            GameListBox.Items.Clear();
+            string gamesPath = @"C:\Users\ikerk\Documents\XSPSX-PC-master\XSPSX-PC\XSPSX\PCSX2\games";
+            if (!Directory.Exists(gamesPath)) return;
 
-            foreach (var game in availableGames)
+            scannedGames.Clear();
+
+            // Scan ISOs
+            foreach (var file in Directory.GetFiles(gamesPath, "*.iso"))
             {
-                GameListBox.Items.Add(new ListBoxItem
-                {
-                    Content = game,
-                    Tag = $@"C:\PCSX2\games\{game}.iso", // Ensure proper path format
-                    FontSize = 16,
-                    Foreground = Brushes.White,
-                    Background = Brushes.Transparent
-                });
+                scannedGames.Add((Path.GetFileNameWithoutExtension(file), "Resources/Icons/game_icon.png"));
             }
 
-            // Add the "Close" option at the bottom
-            GameListBox.Items.Add(new ListBoxItem
+            // Scan Folders for EXE
+            foreach (var dir in Directory.GetDirectories(gamesPath))
             {
-                Content = "Close",
-                Tag = "Close",
-                FontSize = 16,
-                Foreground = Brushes.White,
-                Background = Brushes.Transparent
-            });
-        }
-
-
-        private void ShowGameSideMenu()
-        {
-            GameSideMenu.Visibility = Visibility.Visible;
-
-            // Focus on the game list for navigation
-            GameListBox.Focus();
-
-            // Reset selection for better navigation
-            GameListBox.SelectedItem = null;
-        }
-
-        private void HideGameSideMenu()
-        {
-            GameSideMenu.Visibility = Visibility.Collapsed;
-
-            // Resume XMB navigation
-            CategoryScrollViewer.Focus();
-        }
-
-
-        private void GameListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (GameListBox.SelectedItem is ListBoxItem selectedItem)
-            {
-                string selectedContent = selectedItem.Content.ToString();
-                string selectedTag = selectedItem.Tag as string;
-
-                // Handle Close option
-                if (selectedContent == "Close")
-                {
-                    HideGameSideMenu();
-                    return;
-                }
-
-                // Ensure the selected game path is valid
-                if (!string.IsNullOrEmpty(selectedTag) && selectedTag != "Close")
-                {
-                    selectedGame = selectedTag.Trim(); // Ensure no whitespace errors
-
-                    if (!System.IO.File.Exists(selectedGame))
-                    {
-                        ShowNotification("Invalid Game Path", "The selected game file does not exist.", "Resources/Icons/disk2.png");
-                        return;
-                    }
-
-                    ShowNotification("Game Loaded", $"{selectedContent} is ready to launch!", "Resources/Icons/disk2.png");
-
-                    // Update "Launch Disk" option to reflect the selected game
-                    categoryData["Games"][1] = ("Launch Disk", "Resources/Icons/disk2.png");
-
-                    // Close the side menu
-                    HideGameSideMenu();
-                }
+                if (Directory.GetFiles(dir, "*.exe").Any())
+                    scannedGames.Add((Path.GetFileName(dir), "Resources/Icons/pc_game.png"));
             }
-        }
 
+            HorizontalGameList.ItemsSource = scannedGames;
+        }
 
         private void ExecuteSelection(string selection)
         {
@@ -278,15 +219,18 @@ namespace XSPSX
                     updateWin.ShowDialog();
                     break;
 
-                case "My System Info":
+                case "XSPSX Information":
                     // Open the Information Window 
                     SystemInfoWindow infoWin = new SystemInfoWindow();
                     infoWin.Owner = this; // Keeps it centered and linked to Main
                     infoWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                     infoWin.ShowDialog();
                     break;
+
+               
+
                 case "Package Manager":
-                    // Future logic for package manager
+                    // Future logic for package manager 
                     ShowNotification("System", "Package Manager accessed.", "Resources/Icons/folderStar.png");
                     break;
 
@@ -301,7 +245,41 @@ namespace XSPSX
             }
         }
 
+        private void LaunchPS2Game(string path, string name)
+        {
+            ShowNotification("System", $"Booting {name}...", "Resources/Icons/game_icon.png");
+            PrepareForLaunch();
 
+            PCSX2Launcher launcher = new PCSX2Launcher();
+            launcher.LaunchPCSX2(path, OnReturnToXMB);
+        }
+
+        private void LaunchPCGame(string path, string name)
+        {
+            ShowNotification("System", $"Starting {name}...", "Resources/Icons/pc_game.png");
+            PrepareForLaunch();
+
+            Process p = Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            p.EnableRaisingEvents = true;
+            p.Exited += (s, e) => OnReturnToXMB();
+        }
+
+        private void PrepareForLaunch()
+        {
+            inputTimer.Stop();
+            backgroundMusicPlayer.Pause();
+            this.WindowState = WindowState.Minimized;
+        }
+
+        private void OnReturnToXMB()
+        {
+            Dispatcher.Invoke(() => {
+                this.WindowState = WindowState.Maximized;
+                this.Focus();
+                inputTimer.Start();
+                backgroundMusicPlayer.Play();
+            });
+        }
 
 
         public void ShowNotification(string title, string message, string iconPath)
@@ -353,38 +331,55 @@ namespace XSPSX
 
         private void InputTimer_Tick(object sender, EventArgs e)
         {
-            if (!xInputHandler.IsConnected)
+            if (!xInputHandler.IsConnected) return;
+
+            xInputHandler.Update();
+
+            // --- HORIZONTAL GAMES LIST NAVIGATION ---
+            if (isHorizontalMenuOpen)
             {
-                return;
+                if (xInputHandler.IsDPadLeftPressed())
+                {
+                    if (HorizontalGameList.SelectedIndex > 0)
+                    {
+                        HorizontalGameList.SelectedIndex--;
+                        HorizontalGameList.ScrollIntoView(HorizontalGameList.SelectedItem);
+                        PlayScrollSound();
+                    }
+                }
+                else if (xInputHandler.IsDPadRightPressed())
+                {
+                    if (HorizontalGameList.SelectedIndex < scannedGames.Count - 1)
+                    {
+                        HorizontalGameList.SelectedIndex++;
+                        HorizontalGameList.ScrollIntoView(HorizontalGameList.SelectedItem);
+                        PlayScrollSound();
+                    }
+                }
+                else if (xInputHandler.IsButtonAPressed())
+                {
+                    var selected = scannedGames[HorizontalGameList.SelectedIndex];
+                    ExecuteSelection(selected.Text); // Launches the game logic
+                }
+                else if (xInputHandler.IsButtonBPressed())
+                {
+                    HorizontalGamesOverlay.Visibility = Visibility.Collapsed;
+                    isHorizontalMenuOpen = false;
+                    PlayConfirmSound();
+                }
+                return; // BLOCK XMB input while this menu is open
             }
 
-            xInputHandler.Update(); // Update the controller state
+            // --- STANDARD XMB NAVIGATION ---
+            if (xInputHandler.IsDPadLeftPressed()) NavigateCategories(-1);
+            else if (xInputHandler.IsDPadRightPressed()) NavigateCategories(1);
+            else if (xInputHandler.IsDPadUpPressed()) NavigateVerticalOptions(-1);
+            else if (xInputHandler.IsDPadDownPressed()) NavigateVerticalOptions(1);
 
-            // D-Pad navigation
-            if (xInputHandler.IsDPadLeftPressed())
+            if (xInputHandler.IsButtonAPressed())
             {
-                NavigateCategories(-1);
-            }
-            else if (xInputHandler.IsDPadRightPressed())
-            {
-                NavigateCategories(1);
-            }
-            else if (xInputHandler.IsDPadUpPressed())
-            {
-                NavigateVerticalOptions(-1);
-            }
-            else if (xInputHandler.IsDPadDownPressed())
-            {
-                NavigateVerticalOptions(1);
-            }
-
-            // Button actions
-            if (xInputHandler.IsButtonAPressed()) // This handles the "Confirm/Select" action
-            {
-                // Use the same logic as the Enter key
                 string currentCategory = categories[selectedCategoryIndex];
                 string selectedOptionText = categoryData[currentCategory][selectedVerticalIndex].Text;
-
                 ExecuteSelection(selectedOptionText);
             }
             else if (xInputHandler.IsButtonBPressed())
@@ -979,206 +974,6 @@ namespace XSPSX
         }
         //Inputs for Nav keyboard and Controller----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-        private void ControllerTimer_Tick(object sender, EventArgs e)
-        {
-            // Update controller input
-            xInputHandler.Update();
-
-            // Handle navigation based on controller input
-            if (!xInputHandler.IsDPadLeftPressed())
-            {
-                if (xInputHandler.IsDPadRightPressed())
-                {
-                    NavigateCategories(1);
-                }
-                else if (xInputHandler.IsDPadUpPressed())
-                {
-                    NavigateVerticalOptions(-1);
-                }
-                else if (xInputHandler.IsDPadDownPressed())
-                {
-                    NavigateVerticalOptions(1);
-                }
-            }
-            else
-            {
-                NavigateCategories(-1);
-            }
-
-            if (xInputHandler.IsButtonAPressed())
-            {
-                ConfirmSelection();
-            }
-            else if (xInputHandler.IsButtonBPressed())
-            {
-                CancelSelection();
-            }
-        }
-
-
-
-        private async void ConfirmSelection()
-        {
-            // Play confirmation sound
-            PlayConfirmSound();
-
-            string currentCategory = categories[selectedCategoryIndex];
-            string currentOption = categoryData[currentCategory][selectedVerticalIndex].Text;
-
-            try
-            {
-                if (currentCategory == "Games")
-                {
-                    string pcsx2Path = @"C:\PCSX2\pcsx2-qt.exe"; // Path to PCSX2 executable
-                    PCSX2Launcher pcsx2Launcher = new PCSX2Launcher(pcsx2Path);
-
-                    if (currentOption == "Games") // Open the game side menu
-                    {
-                        ShowGameSideMenu();
-                    }
-                    else if (currentOption == "PCSX2") // Launch PCSX2
-                    {
-                        ShowNotification("Launching PCSX2", "Preparing to boot the emulator...", "Resources/Icons/controller.png");
-
-                        // Pause input and mute background audio
-                        inputTimer.Stop();
-                        backgroundMusicPlayer.Pause();
-
-                        // Add a 2-second delay
-                        await Task.Delay(2000);
-
-                        // Launch PCSX2 without arguments
-                        pcsx2Launcher.LaunchPCSX2(null, () =>
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                inputTimer.Start();
-                                backgroundMusicPlayer.Play();
-                                ShowNotification("PCSX2 Closed", "Returned to the main menu.", "Resources/Icons/controller.png");
-                            });
-                        });
-                    }
-                    else if (currentOption == "Twilight Requiem")
-                    {
-                        string exePath = @"C:\PCSX2\games\TwilightRequiemBuildPrototype\Twilight Requiem.exe";  // Change if your path is different
-
-                        if (!System.IO.File.Exists(exePath))
-                        {
-                            ShowNotification("Game Not Found", "Twilight Requiem.exe is missing!", "Resources/Icons/TwilightRequiemLogo.png");
-                            return;
-                        }
-
-                        // Optional: Custom background (uses filename without extension)
-                        SetGameBackground(exePath);
-
-                        // Spin the disk icon like a real PS3 game boot
-                        StartDiskSpinAnimation();
-
-                        ShowNotification("Launching Game", "Starting Twilight Requiem Prototype...", "Resources/Icons/TwilightRequiemLogo.png");
-
-                        // Pause menu input and music
-                        inputTimer.Stop();
-                        backgroundMusicPlayer.Pause();
-
-                        await Task.Delay(2000);  // Dramatic boot delay
-
-                        // Launch the .exe directly
-                        var startInfo = new ProcessStartInfo
-                        {
-                            FileName = exePath,
-                            UseShellExecute = false,
-                            CreateNoWindow = false  // Set to true if your game is console-only and you don't want a cmd window
-                        };
-
-                        var gameProcess = new Process { StartInfo = startInfo };
-                        gameProcess.EnableRaisingEvents = true;
-                        gameProcess.Exited += (sender, args) =>
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                inputTimer.Start();
-                                backgroundMusicPlayer.Play();
-                                StopDiskSpinAnimation();
-                                ShowNotification("Game Closed", "Returned to XSPSX.", "Resources/Icons/controller.png");
-                            });
-                        };
-
-                        gameProcess.Start();
-                    }
-                    else if (currentOption == "Launch Disk") // Launch the selected game
-                    {
-                        if (string.IsNullOrEmpty(selectedGame))
-                        {
-                            ShowNotification("No Game Selected", "Please select a game from the library.", "Resources/Icons/disk2.png");
-                            return;
-                        }
-
-                        string isoPath = System.IO.Path.GetFullPath(selectedGame);
-                        Console.WriteLine($"Attempting to launch: {isoPath}");
-
-                        if (!System.IO.File.Exists(isoPath))
-                        {
-                            ShowNotification("Game Not Found", $"File not found: {isoPath}", "Resources/Icons/disk2.png");
-                            Console.WriteLine($"ERROR: File does not exist: {isoPath}");
-                            return;
-                        }
-
-                        SetGameBackground(selectedGame);
-
-                        ShowNotification("Launching Game", $"Starting {System.IO.Path.GetFileNameWithoutExtension(isoPath)}...", "Resources/Icons/disk2.png");
-
-                        // Pause input and mute background audio
-                        inputTimer.Stop();
-                        backgroundMusicPlayer.Pause();
-
-                        // Add a 2-second delay
-                        await Task.Delay(2000);
-
-                        pcsx2Launcher.LaunchPCSX2(isoPath, () =>
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                inputTimer.Start();
-                                backgroundMusicPlayer.Play();
-                                ShowNotification("Game Closed", "Returned to the main menu.", "Resources/Icons/disk2.png");
-                            });
-                        });
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Confirmed selection: {currentOption}");
-                    }
-                }
-                else if (currentCategory == "Network" && currentOption == "Web Browser")
-                {
-                    ShowNotification("Opening Web Browser", "Loading XSPSX Injector Website...", "Resources/Icons/browser.png");
-
-                    // Pause input and mute background audio
-                    inputTimer.Stop();
-                    backgroundMusicPlayer.Pause();
-
-                    // Open the Web Browser Window
-                    Dispatcher.Invoke(() =>
-                    {
-                        WebBrowserWindow webBrowser = new WebBrowserWindow();
-                        webBrowser.ShowDialog(); // Waits for browser window to close
-                    });
-
-                    // Resume input and background audio after closing the browser
-                    inputTimer.Start();
-                    backgroundMusicPlayer.Play();
-                    ShowNotification("Web Browser Closed", "Returned to the main menu.", "Resources/Icons/browser.png");
-                }
-                else
-                {
-                    Console.WriteLine($"Confirmed selection: {currentOption}");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to process selection: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
 
 
 
@@ -1211,31 +1006,39 @@ namespace XSPSX
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Left || e.Key == Key.A)
+            // --- HORIZONTAL GAMES LIST NAVIGATION ---
+            if (isHorizontalMenuOpen)
             {
-                NavigateCategories(-1);
+                if (e.Key == Key.Left || e.Key == Key.A)
+                {
+                    if (HorizontalGameList.SelectedIndex > 0) HorizontalGameList.SelectedIndex--;
+                }
+                else if (e.Key == Key.Right || e.Key == Key.D)
+                {
+                    if (HorizontalGameList.SelectedIndex < scannedGames.Count - 1) HorizontalGameList.SelectedIndex++;
+                }
+                else if (e.Key == Key.Enter)
+                {
+                    var selected = scannedGames[HorizontalGameList.SelectedIndex];
+                    ExecuteSelection(selected.Text);
+                }
+                else if (e.Key == Key.Escape || e.Key == Key.Back)
+                {
+                    HorizontalGamesOverlay.Visibility = Visibility.Collapsed;
+                    isHorizontalMenuOpen = false;
+                }
+                return; // BLOCK XMB input
             }
-            else if (e.Key == Key.Right || e.Key == Key.D)
-            {
-                NavigateCategories(1);
-            }
-            else if (e.Key == Key.Up || e.Key == Key.W)
-            {
-                NavigateVerticalOptions(-1);
-            }
-            else if (e.Key == Key.Down || e.Key == Key.S)
-            {
-                NavigateVerticalOptions(1);
-            }
-            // ADD THIS BLOCK BELOW
+
+            // --- STANDARD XMB NAVIGATION ---
+            if (e.Key == Key.Left || e.Key == Key.A) NavigateCategories(-1);
+            else if (e.Key == Key.Right || e.Key == Key.D) NavigateCategories(1);
+            else if (e.Key == Key.Up || e.Key == Key.W) NavigateVerticalOptions(-1);
+            else if (e.Key == Key.Down || e.Key == Key.S) NavigateVerticalOptions(1);
             else if (e.Key == Key.Enter)
             {
                 string currentCategory = categories[selectedCategoryIndex];
-                var options = categoryData[currentCategory];
-
-                // Get the text of the item currently highlighted in the vertical list
-                string selectedOptionText = options[selectedVerticalIndex].Text;
-
+                string selectedOptionText = categoryData[currentCategory][selectedVerticalIndex].Text;
                 ExecuteSelection(selectedOptionText);
             }
         }
