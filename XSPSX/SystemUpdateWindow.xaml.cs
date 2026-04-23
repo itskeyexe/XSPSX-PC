@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 
@@ -52,6 +53,17 @@ namespace XSPSX
             WaveBackground.Play();
         }
 
+        private void PlayUISound(string fileName)
+        {
+            try
+            {
+                MediaPlayer player = new MediaPlayer();
+                player.Open(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources/Sounds", fileName), UriKind.Absolute));
+                player.Play();
+            }
+            catch { /* Ignore if file is missing */ }
+        }
+
         private void CheckForUpdateFiles()
         {
             string updateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Updates");
@@ -61,9 +73,17 @@ namespace XSPSX
 
             if (files.Length > 0)
             {
+                // Update found: Show the panel and set the text
+                ConfirmationPanel.Visibility = Visibility.Visible;
+                UpdateStatusHeader.Text = "Latest update data was found.";
+
                 selectedUpdatePath = files[0];
                 string fileName = Path.GetFileName(selectedUpdatePath);
                 UpdateFileName.Text = fileName;
+
+                UpdateBtn.IsEnabled = true;
+                UpdateBtn.Opacity = 1.0;
+                UpdateBtn.Focus();
 
                 if (fileName.Contains("HFW") || fileName.Contains("CFW") || fileName.ToLower().Contains("jailbreak"))
                 {
@@ -72,7 +92,11 @@ namespace XSPSX
             }
             else
             {
-                UpdateFileName.Text = "No update data found.";
+                // No update found: Keep panel collapsed or show an error state
+                ConfirmationPanel.Visibility = Visibility.Visible; // Show it to display the error
+                UpdateStatusHeader.Text = "No update data was found.";
+                UpdateFileName.Text = "Please insert storage media containing update files.";
+
                 UpdateBtn.IsEnabled = false;
                 UpdateBtn.Opacity = 0.5;
                 CancelBtn.Focus();
@@ -119,6 +143,7 @@ namespace XSPSX
 
         private async void StartUpdate_Click(object sender, RoutedEventArgs e)
         {
+            PlayUISound("SND_SYSTEM_OK.mp3"); // Play confirm sound
             isUpdating = true;
             ConfirmationPanel.Visibility = Visibility.Collapsed;
             InstallPanel.Visibility = Visibility.Visible;
@@ -127,8 +152,8 @@ namespace XSPSX
 
         private void CancelUpdate_Click(object sender, RoutedEventArgs e)
         {
-            inputTimer?.Stop();
-            this.Close();
+            PlayUISound("SND_CANCEL.mp3"); // Play cancel sound
+            FadeOutAndClose();
         }
 
         private async Task BeginUpdateProcess()
@@ -155,18 +180,30 @@ namespace XSPSX
             CompleteUpdateAndReboot();
         }
 
-        private void CompleteUpdateAndReboot()
+        private void FadeOutAndClose()
         {
-            // Update persistent firmware string
-            SystemSettings.CurrentFirmware = UpdateFileName.Text;
-
             inputTimer?.Stop();
 
-            // Relaunch MainWindow to simulate a cold boot/restart
+            DoubleAnimation fadeOut = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.0,
+                Duration = TimeSpan.FromSeconds(0.5)
+            };
+
+            fadeOut.Completed += (s, e) => this.Close();
+            this.BeginAnimation(Window.OpacityProperty, fadeOut);
+        }
+
+        // Update the end of your reboot logic to use this too:
+        private void CompleteUpdateAndReboot()
+        {
+            SystemSettings.CurrentFirmware = UpdateFileName.Text;
+
             MainWindow rebootedBoot = new MainWindow();
             rebootedBoot.Show();
 
-            this.Close();
+            FadeOutAndClose(); // Smooth transition to the cold boot
         }
 
         private async Task TriggerExploitSequence()

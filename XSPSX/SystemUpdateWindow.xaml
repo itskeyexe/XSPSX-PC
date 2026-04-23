@@ -4,6 +4,17 @@
         Title="System Update" WindowState="Maximized" WindowStyle="None" 
         Background="Black" Height="1080" Width="1920" KeyDown="Window_KeyDown">
 
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                 From="0.0" To="1.0" Duration="0:0:0.8"/>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
     <Window.Resources>
         <Style x:Key="PS3ButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#11FFFFFF"/>
@@ -14,8 +25,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
-                            BorderThickness="{TemplateBinding BorderThickness}">
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -58,15 +69,15 @@
             </StackPanel>
 
             <Grid Grid.Row="1">
-                <Grid x:Name="ConfirmationPanel" Visibility="Visible" VerticalAlignment="Center">
+                <Grid x:Name="ConfirmationPanel" Visibility="Collapsed" VerticalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="450"/>
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Margin="0,0,50,0">
-                        <TextBlock Text="Latest update data was found." Foreground="White" FontSize="32" Margin="0,0,0,10"/>
-                        <TextBlock x:Name="UpdateFileName" Text="XSPSX_HFW_4.91.upd" Foreground="Cyan" FontSize="20" Opacity="0.6" FontFamily="Consolas"/>
+                        <TextBlock x:Name="UpdateStatusHeader" Text="Checking for update data..." Foreground="White" FontSize="32" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="UpdateFileName" Text="Searching storage media..." Foreground="Cyan" FontSize="20" Opacity="0.6" FontFamily="Consolas"/>
                         <TextBlock Text="Do you want to begin the installation process? During the update, do not turn off the system or remove the storage media." 
                                    Foreground="#BBB" FontSize="18" TextWrapping="Wrap" Margin="0,30,0,0" LineHeight="28"/>
                     </StackPanel>
